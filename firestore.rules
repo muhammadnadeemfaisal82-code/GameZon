@@ -1,0 +1,133 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: Default deny all reads and writes
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedEditorEmail() {
+      return isVerifiedUser() && request.auth.token.email in [
+        'muhammadnadeemfaisal82@gmail.com',
+        'oneworldmovement6@gmail.com'
+      ];
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        isBootstrappedEditorEmail() ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidCategory(category) {
+      return category in [
+        'World',
+        'Editorial',
+        'Politics',
+        'Pakistan',
+        'Business',
+        'Technology',
+        'Science',
+        'Sports',
+        'Culture'
+      ];
+    }
+
+    function isValidArticle(data, articleId) {
+      return (
+        data.keys().hasAll([
+          'id', 'title', 'deck', 'category', 'author', 'authorUid',
+          'location', 'publishedAt', 'isoDate', 'readTime', 'status',
+          'keywords', 'body', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'title', 'deck', 'category', 'author', 'authorUid',
+          'location', 'publishedAt', 'isoDate', 'readTime', 'status',
+          'keywords', 'imageUrl', 'imageCaption', 'pullQuote',
+          'body', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.id) &&
+        data.id.size() >= 3 &&
+        data.id == articleId &&
+        data.title is string && data.title.size() >= 4 && data.title.size() <= 240 &&
+        data.deck is string && data.deck.size() >= 6 && data.deck.size() <= 600 &&
+        data.category is string && data.category.size() <= 32 && isValidCategory(data.category) &&
+        data.author is string && data.author.size() >= 2 && data.author.size() <= 120 &&
+        isValidId(data.authorUid) &&
+        data.location is string && data.location.size() >= 2 && data.location.size() <= 120 &&
+        data.publishedAt is string && data.publishedAt.size() >= 4 && data.publishedAt.size() <= 60 &&
+        data.isoDate is string && data.isoDate.size() >= 10 && data.isoDate.size() <= 64 &&
+        data.readTime is string && data.readTime.size() >= 3 && data.readTime.size() <= 40 &&
+        data.status is string && data.status.size() <= 16 && data.status == 'published' &&
+        data.keywords is list && data.keywords.size() >= 1 && data.keywords.size() <= 12 &&
+        data.keywords[0] is string && data.keywords[0].size() >= 1 && data.keywords[0].size() <= 60 &&
+        (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 700000)) &&
+        (!('imageCaption' in data) || (data.imageCaption is string && data.imageCaption.size() <= 300)) &&
+        (!('pullQuote' in data) || (data.pullQuote is string && data.pullQuote.size() <= 600)) &&
+        data.body is list && data.body.size() >= 1 && data.body.size() <= 120 &&
+        data.body[0] is string && data.body[0].size() >= 1 && data.body[0].size() <= 20000 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp
+      );
+    }
+
+    match /articles/{articleId} {
+      // Public news broadsheet: published articles readable worldwide; editors can also inspect any article
+      allow get: if isValidId(articleId) && (existing().status == 'published' || isAdmin());
+      // Zero get()/exists() in allow list (Pillar 8 cost-optimization)
+      allow list: if existing().status == 'published' || isBootstrappedEditorEmail();
+      // Pillar 10 evaluation order: Auth -> Static Validation -> Relational Check
+      allow create: if (
+        isVerifiedUser() &&
+        isValidId(articleId) &&
+        isValidArticle(incoming(), articleId) &&
+        incoming().authorUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin()
+      );
+      allow update: if (
+        isVerifiedUser() &&
+        isValidId(articleId) &&
+        isValidArticle(incoming(), articleId) &&
+        incoming().id == existing().id &&
+        incoming().authorUid == existing().authorUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'title', 'deck', 'category', 'author', 'location', 'readTime',
+          'keywords', 'imageUrl', 'imageCaption', 'pullQuote', 'body', 'updatedAt'
+        ]) &&
+        isAdmin()
+      );
+      allow delete: if isVerifiedUser() && isValidId(articleId) && isAdmin();
+    }
+
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && isValidId(adminId) && request.auth.uid == adminId;
+      allow list, create, update, delete: if false;
+    }
+  }
+}

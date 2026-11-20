@@ -1,0 +1,6 @@
+{
+  "name": "NEWS WORLD",
+  "description": "Independent international broadsheet delivering curated reporting across world affairs, business, technology, science, and culture.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

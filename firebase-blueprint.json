@@ -1,0 +1,173 @@
+{
+  "entities": {
+    "Article": {
+      "title": "Article",
+      "description": "A published NEWS WORLD broadsheet news report or editorial article stored in Cloud Firestore.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "URL-safe slug identifier for the article.",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "description": "Primary article headline.",
+          "minLength": 4,
+          "maxLength": 240
+        },
+        "deck": {
+          "type": "string",
+          "description": "Short 1-2 sentence summary deck shown on front page and feeds.",
+          "minLength": 6,
+          "maxLength": 600
+        },
+        "category": {
+          "type": "string",
+          "description": "Broadsheet news section.",
+          "enum": [
+            "World",
+            "Editorial",
+            "Politics",
+            "Pakistan",
+            "Business",
+            "Technology",
+            "Science",
+            "Sports",
+            "Culture"
+          ]
+        },
+        "author": {
+          "type": "string",
+          "description": "Public byline of the author or correspondent.",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "authorUid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the authenticated publisher.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "location": {
+          "type": "string",
+          "description": "Dateline city or bureau location.",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "publishedAt": {
+          "type": "string",
+          "description": "Human-readable publication date label.",
+          "minLength": 4,
+          "maxLength": 60
+        },
+        "isoDate": {
+          "type": "string",
+          "description": "ISO 8601 publication timestamp used for ordering.",
+          "minLength": 10,
+          "maxLength": 64
+        },
+        "readTime": {
+          "type": "string",
+          "description": "Estimated reading time label.",
+          "minLength": 3,
+          "maxLength": 40
+        },
+        "status": {
+          "type": "string",
+          "description": "Publication visibility status.",
+          "enum": ["published"]
+        },
+        "keywords": {
+          "type": "array",
+          "description": "Bounded list of up to 12 news keywords or tags."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Optional external image URL or compressed JPEG data URL.",
+          "maxLength": 700000
+        },
+        "imageCaption": {
+          "type": "string",
+          "description": "Optional photo caption or credit.",
+          "maxLength": 300
+        },
+        "pullQuote": {
+          "type": "string",
+          "description": "Optional highlighted pull quote.",
+          "maxLength": 600
+        },
+        "body": {
+          "type": "array",
+          "description": "Array of article paragraphs (1 to 120 paragraphs)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore server update timestamp."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "deck",
+        "category",
+        "author",
+        "authorUid",
+        "location",
+        "publishedAt",
+        "isoDate",
+        "readTime",
+        "status",
+        "keywords",
+        "body",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Trusted NEWS WORLD editorial administrator record.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified editor email.",
+          "maxLength": 254
+        },
+        "role": {
+          "type": "string",
+          "description": "Administrative role.",
+          "enum": ["admin"]
+        }
+      },
+      "required": ["uid", "email", "role"]
+    }
+  },
+  "firestore": {
+    "/articles/{articleId}": {
+      "schema": { "$ref": "#/entities/Article" },
+      "description": "Publicly readable published NEWS WORLD articles writable only by verified NEWS WORLD editors."
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Read-only self-lookup document for bootstrapped NEWS WORLD editorial administrators."
+    }
+  }
+}
