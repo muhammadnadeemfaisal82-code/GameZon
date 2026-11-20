@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.gamezon.app',
-  appName: 'GameZon',
+  appId: 'life.newsworld.app',
+  appName: 'News World',
   webDir: 'dist'
 };
 
